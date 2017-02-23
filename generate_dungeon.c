@@ -7,6 +7,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <math.h>
+#include <ncurses.h>
 
 #include "priority_queue.h"
 
