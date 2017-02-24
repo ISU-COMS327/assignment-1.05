@@ -105,7 +105,7 @@ void print_tunneling_board();
 void add_message(char* message);
 void center_board_on_player();
 int handle_user_input(int key);
-void handle_user_input_for_look_mode(int key);
+void handle_user_input_for_look_mode(int input);
 void print_board();
 void print_cell();
 void dig_rooms(int number_of_rooms_to_dig);
@@ -211,15 +211,15 @@ int main(int argc, char *args[]) {
             while (!success) {
                 int ch = getch();
                 success = handle_user_input(ch);
-                while (!IS_CONTROL_MODE && !DO_QUIT) {
-                    success = 0;
-                    int ch = getch();
-                    handle_user_input_for_look_mode(ch);
-                }
             }
             if (DO_QUIT) {
                 break;
             }
+            while (!IS_CONTROL_MODE) {
+                int ch = getch();
+                handle_user_input_for_look_mode(ch);
+            }
+
             add_message("");
             center_board_on_player();
             refresh();
@@ -469,7 +469,7 @@ void place_player() {
     struct Coordinate coord;
     coord.x = player.x;
     coord.y = player.y;
-    insert_with_priority(game_queue, coord, 0);
+    insert_with_priority(game_queue, coord, 1000/10);
 }
 
 void set_placeable_areas() {
@@ -730,7 +730,7 @@ void generate_monsters() {
         board[m.y][m.x].has_monster = 1;
         board[m.y][m.x].monster = m;
         monsters[i] = m;
-        insert_with_priority(game_queue, coordinate, i + 1);
+        insert_with_priority(game_queue, coordinate, 1000/m.speed);
     }
 }
 
@@ -782,81 +782,88 @@ void add_message(char * message) {
     refresh();
 }
 
-void handle_user_input_for_look_mode(int key) {
+void handle_user_input_for_look_mode(int input) {
     char * str = malloc(sizeof(char) * 100);
-    sprintf(str, "Hi, You pressed %c", key);
+    sprintf(str, "Hi, You pressed %c", input);
     add_message(str);
-    if (key == 27) { // escape - enter control mode
-        IS_CONTROL_MODE = 1;
-        center_board_on_player();
-        add_message("It's your turn");
-    }
-    if (key == 81) { // Q - quit
-        DO_QUIT = 1;
-    }
 }
 
 int handle_user_input(int key) {
-    struct Coordinate new_coord;
-    new_coord.x = player.x;
-    new_coord.y = player.y;
+    char * str = malloc(sizeof(char) * 100);
+    sprintf(str, "You pressed %c, ie %d", key, key);
+    add_message(str);
+
+    usleep(833333);
     if (key == 107 || key == 8) { // k - one cell up
         if (board[player.y - 1][player.x].hardness > 0) {
            return 0;
         }
-        new_coord.y = player.y - 1;
+        player.y--;
+        ncurses_player_coord.y--;
     }
     else if (key == 106 || key == 2) { // j - one cell down
         if (board[player.y + 1][player.x].hardness > 0) {
             return 0;
         }
-        new_coord.y = player.y + 1;
+        player.y++;
+        ncurses_player_coord.y++;
     }
     else if (key == 104 || key == 4) { // h - one cell left
         if (board[player.y][player.x - 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x - 1;
+        player.x--;
+        ncurses_player_coord.x--;
     }
     else if(key == 108 || key == 6) { // l - one cell right
         if (board[player.y][player.x + 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x + 1;
+        player.x++;
+        ncurses_player_coord.x++;
     }
     else if (key == 121 || key == 7) { // y - one cell up-left
         if (board[player.y - 1][player.x - 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x - 1;
-        new_coord.y = player.y - 1;
+        player.x--;
+        player.y--;
+        ncurses_player_coord.y--;
+        ncurses_player_coord.x--;
     }
     else if (key == 117 || key == 9) { // u - one cell up-right
         if (board[player.y - 1][player.x + 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x + 1;
-        new_coord.y = player.y - 1;
+        player.x ++;
+        player.y --;
+        ncurses_player_coord.x++;
+        ncurses_player_coord.y--;
     }
     else if (key == 110 || key == 3) { // n - one cell low-right
         if (board[player.y + 1][player.x + 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x + 1;
-        new_coord.y = player.y + 1;
+        player.x ++;
+        player.y ++;
+        ncurses_player_coord.x++;
+        ncurses_player_coord.y++;
     }
     else if (key == 98 || key == 1) { // b - one cell low-left
         if (board[player.y + 1][player.x - 1].hardness > 0) {
             return 0;
         }
-        new_coord.x = player.x - 1;
-        new_coord.y = player.y + 1;
+        player.x --;
+        player.y ++;
+        ncurses_player_coord.x--;
+        ncurses_player_coord.y++;
     }
     else if (key == 32 || key == 5) { // space - rest
         // you rest
     }
     else if (key == 76 && IS_CONTROL_MODE) { // L - enter look mode
-        add_message("Entering look mode");
+        add_message("Entering look");
+        usleep(833333);
         IS_CONTROL_MODE = 0;
     }
     else if (key == 81) { // Q - quit
@@ -867,11 +874,6 @@ int handle_user_input(int key) {
         sprintf(str, "'%c' is not supported", key);
         add_message(str);
         return 0;
-    }
-    if (new_coord.x != player.x || new_coord.y != player.y) {
-        kill_player_or_monster_at(new_coord);
-        player.x = new_coord.x;
-        player.y = new_coord.y;
     }
     return 1;
 }
