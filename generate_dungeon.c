@@ -13,6 +13,8 @@
 
 #define HEIGHT 105
 #define WIDTH 160
+#define NCURSES_HEIGHT 20
+#define NCURSES_WIDTH 80
 #define IMMUTABLE_ROCK 255
 #define ROCK 200
 #define ROOM 0
@@ -69,6 +71,7 @@ struct Room {
 Board_Cell board[HEIGHT][WIDTH];
 struct Coordinate placeable_areas[HEIGHT * WIDTH];
 struct Coordinate ncurses_player_coord;
+struct Coordinate ncurses_start_coord;
 struct Room * rooms;
 struct Monster * monsters;
 struct Coordinate player;
@@ -87,6 +90,18 @@ int MAX_ROOM_HEIGHT = DEFAULT_MAX_ROOM_HEIGHT;
 int NUMBER_OF_MONSTERS = DEFAULT_NUMBER_OF_MONSTERS;
 int NUMBER_OF_PLACEABLE_AREAS = 0;
 
+int max(int x, int y) {
+    if (x > y) {
+        return x;
+    }
+    return y;
+}
+int min(int x, int y) {
+    if (x < y) {
+        return x;
+    }
+    return y;
+}
 void print_usage();
 void make_rlg_directory();
 void update_number_of_rooms();
@@ -215,12 +230,14 @@ int main(int argc, char *args[]) {
                     success = 0;
                     int ch = getch();
                     handle_user_input_for_look_mode(ch);
+                    if (DO_QUIT) {
+                        success = 1;
+                    }
                 }
             }
             if (DO_QUIT) {
                 break;
             }
-            add_message("");
             center_board_on_player();
             refresh();
             min.coord.x = player.x;
@@ -782,24 +799,83 @@ void add_message(char * message) {
     refresh();
 }
 
+void update_board_view(int ncurses_start_x, int ncurses_start_y) {
+    ncurses_start_x = min(ncurses_start_x + NCURSES_WIDTH, WIDTH - 1);
+    ncurses_start_y = min(ncurses_start_y + NCURSES_HEIGHT, HEIGHT - 1);
+    ncurses_start_x = max(ncurses_start_x - NCURSES_WIDTH, 0);
+    ncurses_start_y = max(ncurses_start_y - NCURSES_HEIGHT, 0);
+    ncurses_start_coord.x = ncurses_start_x;
+    ncurses_start_coord.y = ncurses_start_y;
+    int row = 1;
+    for (int y = ncurses_start_y; y <= ncurses_start_y + NCURSES_HEIGHT; y++) {
+        int col = 0;
+        for (int x = ncurses_start_x; x <= ncurses_start_x + NCURSES_WIDTH; x++) {
+            if (PLAYER_IS_ALIVE && y == player.y && x == player.x) {
+                mvprintw(row, col, "@");
+                ncurses_player_coord.x = col;
+                ncurses_player_coord.y = row;
+            }
+            else if (board[y][x].has_monster == 1) {
+                struct Coordinate coord;
+                coord.x = x;
+                coord.y = y;
+                int index = get_monster_index(coord);
+                mvprintw(row, col, "%x", monsters[index].decimal_type);
+            }
+            else {
+                Board_Cell cell = board[y][x];
+                if (strcmp(cell.type, TYPE_ROCK) == 0) {
+                    mvprintw(row, col, " ");
+                }
+                else if (strcmp(cell.type, TYPE_ROOM) == 0) {
+                    mvprintw(row, col, ".");
+                }
+                else if (strcmp(cell.type, TYPE_CORRIDOR) == 0) {
+                    mvprintw(row, col, "#");
+                }
+                else {
+                    mvprintw(row, col, "F");
+                }
+            }
+            col ++;
+        }
+        row ++;
+    }
+}
+
 void handle_user_input_for_look_mode(int key) {
-    char * str = malloc(sizeof(char) * 100);
-    sprintf(str, "Hi, You pressed %c", key);
-    add_message(str);
-    if (key == 27) { // escape - enter control mode
+    int new_x = ncurses_start_coord.x;
+    int new_y = ncurses_start_coord.y;
+    if(key == 107 || key == 8) { // k - one page up
+        new_y -= NCURSES_HEIGHT;
+    }
+    else if (key == 106 || key == 2) { // j - one page down
+        new_y += NCURSES_HEIGHT;
+    }
+    else if (key == 104 || key == 4) { // h - one page left
+        new_x -= NCURSES_WIDTH;
+    }
+    else if(key == 108 || key == 6) { // l - one page right
+        new_x += NCURSES_WIDTH;
+    }
+    else if (key == 27) { // escape - enter control mode
         IS_CONTROL_MODE = 1;
         center_board_on_player();
         add_message("It's your turn");
+        return;
     }
-    if (key == 81) { // Q - quit
+    else if (key == 81) { // Q - quit
         DO_QUIT = 1;
     }
+    update_board_view(new_x, new_y);
+    refresh();
 }
 
 int handle_user_input(int key) {
     struct Coordinate new_coord;
     new_coord.x = player.x;
     new_coord.y = player.y;
+    char * str = malloc(sizeof(char) * 100);
     if (key == 107 || key == 8) { // k - one cell up
         if (board[player.y - 1][player.x].hardness > 0) {
            return 0;
@@ -854,6 +930,8 @@ int handle_user_input(int key) {
     }
     else if (key == 32 || key == 5) { // space - rest
         // you rest
+        sprintf(str, "You rest");
+        add_message(str);
     }
     else if (key == 76 && IS_CONTROL_MODE) { // L - enter look mode
         add_message("Entering look mode");
@@ -863,7 +941,6 @@ int handle_user_input(int key) {
         DO_QUIT = 1;
     }
     else {
-        char * str = malloc(sizeof(char) * 100);
         sprintf(str, "'%c' is not supported", key);
         add_message(str);
         return 0;
@@ -877,61 +954,9 @@ int handle_user_input(int key) {
 }
 
 void center_board_on_player() {
-    int min_y = player.y - 10;
-    int max_y = player.y + 10;
-    int min_x = player.x - 40;
-    int max_x = player.x + 40;
-    if (min_y <=  0) {
-        max_y += (-min_y);
-        min_y = 0;
-    }
-    if (max_y >= HEIGHT - 1) {
-        min_y -= (HEIGHT - 1 - max_y);
-        max_y = HEIGHT - 1;
-    }
-    if (min_x <= 0) {
-        max_x += (-min_x);
-        min_x = 0;
-    }
-    if (max_x >= WIDTH - 1) {
-        min_x -= (WIDTH - 1 - max_x);
-        max_x = WIDTH - 1;
-    }
-    int row = 1;
-    for (int y = min_y; y <= max_y; y++) {
-        int col = 0;
-        for (int x = min_x; x <= max_x; x++) {
-            if (PLAYER_IS_ALIVE && y == player.y && x == player.x) {
-                mvprintw(row, col, "@");
-                ncurses_player_coord.x = col;
-                ncurses_player_coord.y = row;
-            }
-            else if (board[y][x].has_monster == 1) {
-                struct Coordinate coord;
-                coord.x = x;
-                coord.y = y;
-                int index = get_monster_index(coord);
-                mvprintw(row, col, "%x", monsters[index].decimal_type);
-            }
-            else {
-                Board_Cell cell = board[y][x];
-                if (strcmp(cell.type, TYPE_ROCK) == 0) {
-                    mvprintw(row, col, " ");
-                }
-                else if (strcmp(cell.type, TYPE_ROOM) == 0) {
-                    mvprintw(row, col, ".");
-                }
-                else if (strcmp(cell.type, TYPE_CORRIDOR) == 0) {
-                    mvprintw(row, col, "#");
-                }
-                else {
-                    mvprintw(row, col, "F");
-                }
-            }
-            col ++;
-        }
-        row ++;
-    }
+    int new_y = player.y - 10;
+    int new_x = player.x - 40;
+    update_board_view(new_x, new_y);
     move(ncurses_player_coord.y, ncurses_player_coord.x);
 }
 
