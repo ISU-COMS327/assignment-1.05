@@ -30,6 +30,8 @@
 static char * TYPE_ROOM = "room";
 static char * TYPE_CORRIDOR = "corridor";
 static char * TYPE_ROCK = "rock";
+static char * TYPE_UPSTAIR = "upstair";
+static char * TYPE_DOWNSTAIR = "downstair";
 
 struct Monster {
     uint8_t x;
@@ -105,6 +107,8 @@ int min(int x, int y) {
 void print_usage();
 void make_rlg_directory();
 void update_number_of_rooms();
+void generate_new_board();
+void generate_stairs();
 int random_int(int min_num, int max_num, int add_to_seed);
 void initialize_board();
 void initialize_immutable_rock();
@@ -189,26 +193,11 @@ int main(int argc, char *args[]) {
     if (player_x == -1) {
         player_x = 0;
     }
+    make_rlg_directory();
     player.x = player_x;
     player.y = player_y;
     update_number_of_rooms();
-    initialize_board();
-    make_rlg_directory();
-
-    if (DO_LOAD) {
-        load_board();
-    }
-    else {
-        rooms = malloc(sizeof(struct Room) * NUMBER_OF_ROOMS);
-        dig_rooms(NUMBER_OF_ROOMS);
-        dig_cooridors();
-    }
-    game_queue = create_new_queue(NUMBER_OF_MONSTERS + 1);
-    place_player();
-    set_placeable_areas();
-    set_non_tunneling_distance_to_player();
-    set_tunneling_distance_to_player();
-    generate_monsters();
+    generate_new_board();
     initscr();
     noecho();
     center_board_on_player();
@@ -288,6 +277,63 @@ void update_number_of_rooms() {
     if (NUMBER_OF_ROOMS > MAX_NUMBER_OF_ROOMS) {
         printf("Maximum number of rooms is %d\n", MAX_NUMBER_OF_ROOMS);
         NUMBER_OF_ROOMS = MAX_NUMBER_OF_ROOMS;
+    }
+}
+
+void generate_new_board() {
+    initialize_board();
+    if (DO_LOAD) {
+        load_board();
+        DO_LOAD = 0;
+    }
+    else {
+        if (rooms) {
+            free(rooms);
+        }
+        rooms = malloc(sizeof(struct Room) * NUMBER_OF_ROOMS);
+        dig_rooms(NUMBER_OF_ROOMS);
+        dig_cooridors();
+    }
+    game_queue = create_new_queue(NUMBER_OF_MONSTERS + 1);
+    place_player();
+    set_placeable_areas();
+    set_non_tunneling_distance_to_player();
+    set_tunneling_distance_to_player();
+    generate_monsters();
+    generate_stairs();
+}
+
+struct Coordinate get_random_unoccupied_location_in_room(struct Room room) {
+    struct Available_Coords available_coords;
+    available_coords.length = 0;
+    available_coords.coords = malloc(sizeof(struct Coordinate) * (room.end_y - room.start_y) * (room.end_x - room.start_x));
+    for (int y = room.start_y; y < room.end_y; y++) {
+        for (int x = room.start_x; x < room.end_x; x++) {
+            Board_Cell cell =  board[y][x];
+            if (y != player.y && x != player.x && !cell.has_monster) {
+                struct Coordinate coord;
+                coord.y = y;
+                coord.x = x;
+                available_coords.coords[available_coords.length]= coord;
+                available_coords.length ++;
+            }
+        }
+    }
+    int index = random_int(0, available_coords.length, room.start_x);
+    return available_coords.coords[index];
+}
+
+void generate_stairs() {
+    int number_of_stairs_up = NUMBER_OF_ROOMS / 2;
+    for (int i = 0; i < number_of_stairs_up; i++) {
+        struct Room room = rooms[i];
+        struct Coordinate coord = get_random_unoccupied_location_in_room(room);
+        board[coord.y][coord.x].type = TYPE_UPSTAIR;
+    }
+    for (int i = number_of_stairs_up; i < NUMBER_OF_ROOMS; i++) {
+        struct Room room = rooms[i];
+        struct Coordinate coord = get_random_unoccupied_location_in_room(room);
+        board[coord.y][coord.x].type = TYPE_DOWNSTAIR;
     }
 }
 
@@ -824,7 +870,13 @@ void update_board_view(int ncurses_start_x, int ncurses_start_y) {
             }
             else {
                 Board_Cell cell = board[y][x];
-                if (strcmp(cell.type, TYPE_ROCK) == 0) {
+                if (strcmp(cell.type, TYPE_UPSTAIR) == 0) {
+                    mvprintw(row, col, "<");
+                }
+                else if (strcmp(cell.type, TYPE_DOWNSTAIR) == 0) {
+                    mvprintw(row, col, ">");
+                }
+                else if (strcmp(cell.type, TYPE_ROCK) == 0) {
                     mvprintw(row, col, " ");
                 }
                 else if (strcmp(cell.type, TYPE_ROOM) == 0) {
@@ -927,6 +979,28 @@ int handle_user_input(int key) {
         }
         new_coord.x = player.x - 1;
         new_coord.y = player.y + 1;
+    }
+    else if (key == 60 && IS_CONTROL_MODE) {  // upstairs
+        if (strcmp(board[player.y][player.x].type, TYPE_UPSTAIR) != 0) {
+           return 0;
+        }
+        sprintf(str, "You travel upstairs");
+        add_message(str);
+        player.x = 0;
+        player.y = 0;
+        generate_new_board();
+        return 1;
+    }
+    else if (key == 62) {  // downstairs
+        if (strcmp(board[player.y][player.x].type, TYPE_DOWNSTAIR) != 0) {
+            return 0;
+        }
+        sprintf(str, "You travel downstairs");
+        add_message(str);
+        player.y = 0;
+        player.x = 0;
+        generate_new_board();
+        return 1;
     }
     else if (key == 32 || key == 5) { // space - rest
         // you rest
