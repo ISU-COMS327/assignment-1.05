@@ -1,0 +1,71 @@
+commit 3309601
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Thu Feb 23 09:38:02 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Thu Feb 23 09:38:02 2017 -0600
+
+    Initialized repository
+
+commit be254f6
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Thu Feb 23 09:38:50 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Thu Feb 23 09:38:50 2017 -0600
+
+    Updated README
+
+commit c5022f4
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Thu Feb 23 09:56:53 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Thu Feb 23 09:56:53 2017 -0600
+
+    Include ncurses
+
+commit e28d71c
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Fri Feb 24 14:44:37 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Fri Feb 24 14:44:37 2017 -0600
+
+    Print board via ncurses and player movement. Still need to implement stairs and look mode
+
+commit a6350da
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Fri Feb 24 14:45:20 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Fri Feb 24 14:45:20 2017 -0600
+
+    Add .gitignore and remove file that was accidentally created
+
+commit c272c44
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Fri Feb 24 15:57:59 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Fri Feb 24 15:57:59 2017 -0600
+
+    Finished look mode
+
+commit 69b5f2a
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Fri Feb 24 17:45:34 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Fri Feb 24 17:45:34 2017 -0600
+
+    Project description updated?
+
+commit 5e5fa75
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Mon Feb 27 08:51:32 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Mon Feb 27 08:51:32 2017 -0600
+
+    Remove accidentally commited .swp file
+
+commit f29c0f6 (HEAD -> master, origin/master)
+Author:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+AuthorDate: Tue Mar 7 15:51:37 2017 -0600
+Commit:     Joseph McGovern <joseph.mcgovern@webfilings.com>
+CommitDate: Tue Mar 7 15:51:37 2017 -0600
+
+    implement stairs
