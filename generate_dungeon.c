@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <ncurses.h>
+#include <netinet/in.h>
+#include <limits.h>
 
 #include "priority_queue.h"
 
@@ -636,7 +638,7 @@ void set_tunneling_distance_to_player() {
                 board[y][x].tunneling_distance = 0;
             }
             else {
-                board[y][x].tunneling_distance = INFINITY;
+                board[y][x].tunneling_distance = INT_MAX;
             }
             if (board[y][x].hardness < IMMUTABLE_ROCK) {
                 insert_with_priority(tunneling_queue, coord, board[y][x].tunneling_distance);
@@ -733,7 +735,7 @@ void set_non_tunneling_distance_to_player() {
                 board[y][x].non_tunneling_distance = 0;
             }
             else {
-                board[y][x].non_tunneling_distance = INFINITY;
+                board[y][x].non_tunneling_distance = INT_MAX;
             }
             if (board[y][x].hardness < 1) {
                 insert_with_priority(non_tunneling_queue, coord, board[y][x].non_tunneling_distance);
